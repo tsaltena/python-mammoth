@@ -123,10 +123,22 @@ class _DocumentConverter(documents.element_visitor(args=1)):
             paths.append(self._find_style_for_run_property("italic", default="em"))
         if run.is_bold:
             paths.append(self._find_style_for_run_property("bold", default="strong"))
-        paths.append(self._find_html_path_for_run(run))
-
+        try:
+            if run.xpath:
+                run.children[-1].attributes = {'xpath':run.xpath}
+                #paths[-1].tag.attributes = {'data-xpath': run.xpath}
+        except IndexError:
+            print(run.children)
+        # except AttributeError:
+        #     pass
+        nodes = partial(self._find_html_path_for_run(run).wrap, nodes)
         for path in paths:
             nodes = partial(path.wrap, nodes)
+        # if run.xpath:
+        #     nodes = partial(html_paths.element(["xpath"], xpath=str(run.xpath)).wrap, nodes)
+
+
+
 
         return nodes()
     
@@ -142,7 +154,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
 
     def visit_text(self, text, context):
-        return [html.text(text.value)]
+        return [html.text(text.value, attributes=text.attributes)]
     
     
     def visit_hyperlink(self, hyperlink, context):
@@ -168,7 +180,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
     
     
     def visit_tab(self, tab, context):
-        return [html.text("\t")]
+        return [            html.element("span", {'style': 'margin-left:2em;'}) ]
 
     _default_table_path = html_paths.path([html_paths.element(["table"], fresh=True)])
 
@@ -235,11 +247,13 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         self._note_references.append(note_reference)
         note_number = len(self._note_references)
         return [
-            html.element("sup", {}, [
-                html.element("a", {
-                    "href": "#" + self._note_html_id(note_reference),
-                    "id": self._note_ref_html_id(note_reference),
-                }, [html.text("[{0}]".format(note_number))])
+            html.element("span", {}, [
+                html.element("sup", {}, [
+                    html.element("a", {
+                        "href": "#" + self._note_html_id(note_reference),
+                        "id": self._note_ref_html_id(note_reference),
+                    }, [html.text("[{0}]".format(note_number))])
+                ])
             ])
         ]
 
@@ -316,7 +330,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
     def _find_html_path_for_run(self, run):
         return self._find_html_path(run, "run", default=html_paths.empty, warn_unrecognised=True)
         
-    
+
     def _find_html_path(self, element, element_type, default, warn_unrecognised=False):
         style = self._find_style(element, element_type)
         if style is not None:

@@ -1,6 +1,7 @@
 import contextlib
 import re
 import sys
+import html
 
 from .. import documents
 from .. import results
@@ -70,8 +71,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         "w:tcPr",
     ])
 
-    def text(element):
-        return _success(documents.Text(_inner_text(element)))
+    def text(element, attributes=None, tag=None):
+        return _success(documents.Text(_inner_text(element, tag), tag))
 
     def run(element):
         properties = element.find_child_or_null("w:rPr")
@@ -85,7 +86,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         is_underline = read_boolean_element(properties.find_child("w:u"))
         is_strikethrough = read_boolean_element(properties.find_child("w:strike"))
         is_small_caps = read_boolean_element(properties.find_child("w:smallCaps"))
-        
+        xpath = element.attributes['xpath']
         def add_complex_field_hyperlink(children):
             hyperlink_href = current_hyperlink_href()
             if hyperlink_href is None:
@@ -106,6 +107,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 is_strikethrough=is_strikethrough,
                 is_small_caps=is_small_caps,
                 vertical_alignment=vertical_alignment,
+                xpath=xpath,
                 font=font,
             ))
     
@@ -121,7 +123,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         alignment = properties.find_child_or_null("w:jc").attributes.get("w:val")
         numbering = _read_numbering_properties(properties.find_child_or_null("w:numPr"))
         indent = _read_paragraph_indent(properties.find_child_or_null("w:ind"))
-        
+
         return _ReadResult.map_results(
             _read_paragraph_style(properties),
             _read_xml_elements(element.children),
@@ -132,8 +134,9 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 numbering=numbering,
                 alignment=alignment,
                 indent=indent,
-            )).append_extra()
-    
+            ),
+        ).append_extra()
+
     def _read_paragraph_style(properties):
         return _read_style(properties, "w:pStyle", "Paragraph", styles.find_paragraph_style_by_id)
     
@@ -163,7 +166,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 complex_field = complex_fields.hyperlink(hyperlink_href)
             complex_field_stack.pop()
             complex_field_stack.append(complex_field)
-        return _empty_result
+        return  _empty_result
     
     def parse_hyperlink_field_code(instr_text):
         result = re.match(r'\s*HYPERLINK "(.*)"', instr_text)
@@ -172,9 +175,9 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         else:
             return result.group(1)
     
-    def read_instr_text(element):
-        current_instr_text.append(_inner_text(element))
-        return _empty_result
+    def read_instr_text(element, attributes=None):
+        current_instr_text.append(_inner_text(element, attributes))
+        return  _empty_result
     
     def _read_style(properties, style_tag_name, style_type, find_style_by_id):
         messages = []
@@ -324,7 +327,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
     
     
     def pict(element):
-        return read_child_elements(element).to_extra()
+        return read_child_elements(element)
     
     
     def hyperlink(element):
@@ -512,7 +515,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
     return _read_xml_elements
 
 
-def _inner_text(node):
+def _inner_text(node, attributes=None):
     if node.node_type == node_types.text:
         return node.value
     else:

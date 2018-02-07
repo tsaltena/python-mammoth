@@ -50,11 +50,13 @@ class Run(HasChildren):
     is_strikethrough = cobble.field()
     is_small_caps = cobble.field()
     vertical_alignment = cobble.field()
+    xpath = cobble.field()
     font = cobble.field()
 
 @cobble.data
 class Text(Element):
     value = cobble.field()
+    tag=cobble.field()
 
 @cobble.data
 class Hyperlink(HasChildren):
@@ -123,6 +125,7 @@ def run(
     is_strikethrough=None,
     is_small_caps=None,
     vertical_alignment=None,
+    xpath = str(),
     font=None,
 ):
     if vertical_alignment is None:
@@ -138,6 +141,7 @@ def run(
         is_small_caps=bool(is_small_caps),
         vertical_alignment=vertical_alignment,
         font=font,
+        xpath=xpath,
     )
 
 class VerticalAlignment(object):
@@ -145,7 +149,8 @@ class VerticalAlignment(object):
     superscript = "superscript"
     subscript = "subscript"
 
-text = Text
+def text(value, attributes={}):
+    return Text(value=value, attributes=attributes)
 
 _tab = Tab()
 

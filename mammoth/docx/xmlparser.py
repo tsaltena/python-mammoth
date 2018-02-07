@@ -8,7 +8,7 @@ class XmlElement(object):
     name = cobble.field()
     attributes = cobble.field()
     children = cobble.field()
-    
+
     def find_child_or_null(self, name):
         return self.find_child(name) or _null_xml_element
     
@@ -79,7 +79,7 @@ def parse_xml(fileobj, namespace_mapping=None):
         namespace_prefixes = {}
     else:
         namespace_prefixes = dict((uri, prefix) for prefix, uri in namespace_mapping)
-    
+
     handler = Handler(namespace_prefixes)
     parser = xml.sax.make_parser()
     parser.setFeature(xml.sax.handler.feature_namespaces, True)
@@ -93,18 +93,53 @@ class Handler(xml.sax.handler.ContentHandler):
         self._namespace_prefixes = namespace_prefixes
         self._element_stack = [RootElement()]
         self._character_buffer = []
-    
+
     def root(self):
         return self._element_stack[0].children[0]
-    
+
+    def startDocument(self):
+        #Path components representing XPath steps to current element
+        self.steps = [u'']
+        return
+
     def startElementNS(self, name, qname, attrs):
+        #original
         self._flush_character_buffer()
         attributes = dict((self._read_name(key), value) for key, value in attrs.items())
         element = XmlElement(self._read_name(name), attributes, [])
+        #Xpath extensions:
+        # Update list for sibling element names
+
+        # Count preceding siblings of the same name as current
+        # (count starts at 1, as required by XPath, since we already
+        # added the current name to the list)
+        try:
+            prefix = self._namespace_prefixes[name[0]] + ':'
+        except KeyError:
+            prefix= 'w:'
+        name = prefix+name[1]
+
         self._element_stack[-1].children.append(element)
+        name_count = len([1 for siblings in self._element_stack[-1].children
+                          if siblings.name == name
+                          ])
+        # Update steps list, using the computed positional predicate
+        #get namespace prefix:
         self._element_stack.append(element)
-    
+
+        self.steps.append(name + '[' + str(name_count) + ']')
+        # Stack things up properly for the child elements
+
+
+
+        attributes.update({'xpath': '/'.join(self.steps)})
+
+
+
     def endElementNS(self, name, qname):
+        #Xpath related:
+        self.steps.pop()
+        #original
         self._flush_character_buffer()
         self._element_stack.pop()
         

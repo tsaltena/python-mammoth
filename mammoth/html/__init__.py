@@ -2,8 +2,8 @@ from ..lists import flat_map
 from .nodes import TextNode, Tag, Element, ForceWrite, NodeVisitor
 
 
-def text(value):
-    return TextNode(value)
+def text(value, attributes={}):
+    return TextNode(value, attributes)
 
 
 def tag(tag_names, attributes=None, collapsible=None, separator=None):
@@ -117,8 +117,10 @@ class _NodeWriter(NodeVisitor):
         self._writer = writer
     
     def visit_text_node(self, node):
+        self._writer.start('span', node.attributes)
         self._writer.text(node.value)
-    
+        self._writer.end('span')
+
     def visit_element(self, element):
         if element.is_void():
             self._writer.self_closing(element.tag_name, element.attributes)

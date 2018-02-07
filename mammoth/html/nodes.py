@@ -6,11 +6,6 @@ class Node(object):
 
 
 @cobble.data
-class TextNode(Node):
-    value = cobble.field()
-
-
-@cobble.data
 class Tag(object):
     tag_names = cobble.field()
     attributes = cobble.field()
@@ -23,10 +18,20 @@ class Tag(object):
 
 
 @cobble.data
+class TextNode(Node):
+    value = cobble.field()
+    attributes = cobble.field()
+
+    @property
+    def tag_names(self):
+        return self.tag.tag_names
+
+
+@cobble.data
 class Element(Node):
     tag = cobble.field()
     children = cobble.field()
-    
+
     @property
     def tag_name(self):
         return self.tag.tag_name
