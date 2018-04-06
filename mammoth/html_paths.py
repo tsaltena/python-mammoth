@@ -1,5 +1,4 @@
 import cobble
-import mammoth
 from . import html
 
 
