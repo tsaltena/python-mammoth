@@ -128,7 +128,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                 run.children[-1].attributes = {'xpath':run.xpath}
                 #paths[-1].tag.attributes = {'data-xpath': run.xpath}
         except IndexError:
-            print(run.children)
+            pass
         # except AttributeError:
         #     pass
         nodes = partial(self._find_html_path_for_run(run).wrap, nodes)
@@ -154,8 +154,11 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
 
     def visit_text(self, text, context):
-        return [html.text(text.value, attributes=text.attributes)]
-    
+        try:
+            return [html.text(text.value, attributes=text.attributes)]
+        except AttributeError:
+            return [html.text(text.value)]
+
     
     def visit_hyperlink(self, hyperlink, context):
         if hyperlink.anchor is None:

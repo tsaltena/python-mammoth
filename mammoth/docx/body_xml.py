@@ -222,7 +222,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
     
     
     def no_break_hyphen(element):
-        return _success(documents.text(unichr(0x2011)))
+        return _success(documents.text(unichr(0x2011), attributes=None))
     
     
     def table(element):

@@ -150,7 +150,7 @@ class VerticalAlignment(object):
     subscript = "subscript"
 
 def text(value, attributes={}):
-    return Text(value=value, attributes=attributes)
+    return Text(value, attributes)
 
 _tab = Tab()
 
