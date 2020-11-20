@@ -121,7 +121,7 @@ class Handler(xml.sax.handler.ContentHandler):
 
         self._element_stack[-1].children.append(element)
         name_count = len([1 for siblings in self._element_stack[-1].children
-                          if siblings.name == name
+                          if siblings.node_type == node_types.element and siblings.name == name
                           ])
         # Update steps list, using the computed positional predicate
         #get namespace prefix:
