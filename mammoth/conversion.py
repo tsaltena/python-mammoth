@@ -81,17 +81,17 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
     def visit_document(self, document, context):
         nodes = self._visit_all(document.children, context)
-        notes = [
-            document.notes.resolve(reference)
-            for reference in self._note_references
-        ]
-        notes_list = html.element("ol", {}, self._visit_all(notes, context))
+        # notes = [
+        #     document.notes.resolve(reference)
+        #     for reference in self._note_references
+        # ]
+        # notes_list = html.element("ol", {}, self._visit_all(notes, context))
         comments = html.element("dl", {}, [
             html_node
             for referenced_comment in self._referenced_comments
             for html_node in self.visit_comment(referenced_comment, context)
         ])
-        return nodes + [notes_list, comments]
+        return nodes + [comments]
 
 
     def visit_paragraph(self, paragraph, context):
