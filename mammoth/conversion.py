@@ -17,16 +17,16 @@ def convert_document_element_to_html(element,
         id_prefix=None,
         output_format=None,
         ignore_empty_paragraphs=True):
-            
+
     if style_map is None:
         style_map = []
-    
+
     if id_prefix is None:
         id_prefix = ""
-    
+
     if convert_image is None:
         convert_image = images.data_uri
-    
+
     if isinstance(element, documents.Document):
         comments = dict(
             (comment.comment_id, comment)
@@ -47,7 +47,7 @@ def convert_document_element_to_html(element,
     )
     context = _ConversionContext(is_table_header=False)
     nodes = converter.visit(element, context)
-    
+
     writer = writers.writer(output_format)
     html.write(writer, html.collapse(html.strip_empty(nodes)))
     return results.Result(writer.as_string(), messages)
@@ -56,7 +56,7 @@ def convert_document_element_to_html(element,
 @cobble.data
 class _ConversionContext(object):
     is_table_header = cobble.field()
-    
+
     def copy(self, **kwargs):
         return cobble.copy(self, **kwargs)
 
@@ -71,7 +71,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         self._referenced_comments = []
         self._convert_image = convert_image
         self._comments = comments
-    
+
     def visit_image(self, image, context):
         try:
             return self._convert_image(image)
@@ -81,17 +81,17 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
     def visit_document(self, document, context):
         nodes = self._visit_all(document.children, context)
-        # notes = [
-        #     document.notes.resolve(reference)
-        #     for reference in self._note_references
-        # ]
-        # notes_list = html.element("ol", {}, self._visit_all(notes, context))
+        notes = [
+            document.notes.resolve(reference)
+            for reference in self._note_references
+        ]
+        notes_list = html.element("ol", {}, self._visit_all(notes, context))
         comments = html.element("dl", {}, [
             html_node
             for referenced_comment in self._referenced_comments
             for html_node in self.visit_comment(referenced_comment, context)
         ])
-        return nodes + [comments]
+        return nodes + [notes_list, comments]
 
 
     def visit_paragraph(self, paragraph, context):
@@ -101,7 +101,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                 return content
             else:
                 return [html.force_write] + content
-        
+
         html_path = self._find_html_path_for_paragraph(paragraph)
         return html_path.wrap(children)
 
@@ -111,6 +111,8 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         paths = []
         if run.is_small_caps:
             paths.append(self._find_style_for_run_property("small_caps"))
+        if run.is_all_caps:
+            paths.append(self._find_style_for_run_property("all_caps"))
         if run.is_strikethrough:
             paths.append(self._find_style_for_run_property("strikethrough", default="s"))
         if run.is_underline:
@@ -134,15 +136,10 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         nodes = partial(self._find_html_path_for_run(run).wrap, nodes)
         for path in paths:
             nodes = partial(path.wrap, nodes)
-        # if run.xpath:
-        #     nodes = partial(html_paths.element(["xpath"], xpath=str(run.xpath)).wrap, nodes)
-
-
-
 
         return nodes()
-    
-    
+
+
     def _find_style_for_run_property(self, element_type, default=None):
         style = self._find_style(None, element_type)
         if style is not None:
@@ -165,25 +162,25 @@ class _DocumentConverter(documents.element_visitor(args=1)):
             href = hyperlink.href
         else:
             href = "#{0}".format(self._html_id(hyperlink.anchor))
-        
+
         attributes = {"href": href}
         if hyperlink.target_frame is not None:
             attributes["target"] = hyperlink.target_frame
-        
+
         nodes = self._visit_all(hyperlink.children, context)
         return [html.collapsible_element("a", attributes, nodes)]
-    
-    
+
+
     def visit_bookmark(self, bookmark, context):
         element = html.collapsible_element(
             "a",
             {"id": self._html_id(bookmark.name)},
             [html.force_write])
         return [element]
-    
-    
+
+
     def visit_tab(self, tab, context):
-        return [            html.element("span", {'style': 'margin-left:2em;'}) ]
+        return [html.element("span", {'style': 'margin-left:2em;'}) ]
 
     _default_table_path = html_paths.path([html_paths.element(["table"], fresh=True)])
 
@@ -198,7 +195,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         )
         if body_index is None:
             body_index = len(table.children)
-            
+
         if body_index == 0:
             children = self._visit_all(table.children, context.copy(is_table_header=False))
         else:
@@ -208,14 +205,14 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                 html.element("thead", {}, head_rows),
                 html.element("tbody", {}, body_rows),
             ]
-            
+
         return [html.force_write] + children
-    
-    
+
+
     def visit_table_row(self, table_row, context):
-        return [html.element("tr", {}, self._visit_all(table_row.children, context))]
-    
-    
+        return [html.element("tr", {}, [html.force_write] + self._visit_all(table_row.children, context))]
+
+
     def visit_table_cell(self, table_cell, context):
         if context.is_table_header:
             tag_name = "th"
@@ -260,7 +257,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
             ])
         ]
 
-    
+
     def visit_note(self, note, context):
         return None
         note_body = self._visit_all(note.body, context) + [
@@ -289,15 +286,15 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                     "id": self._reference_html_id("comment", reference.comment_id),
                 }, [html.text(label)])
             ]
-        
+
         html_path = self._find_html_path(
             None,
             "comment_reference",
             default=html_paths.ignore,
         )
-        
+
         return html_path.wrap(nodes)
-    
+
     def visit_comment(self, referenced_comment, context):
         label, comment = referenced_comment
         # TODO remove duplication with notes
@@ -330,24 +327,26 @@ class _DocumentConverter(documents.element_visitor(args=1)):
     def _find_html_path_for_paragraph(self, paragraph):
         default = html_paths.path([html_paths.element("p", fresh=True)])
         return self._find_html_path(paragraph, "paragraph", default, warn_unrecognised=True)
-    
+
     def _find_html_path_for_run(self, run):
         return self._find_html_path(run, "run", default=html_paths.empty, warn_unrecognised=True)
-        
+
+
+
 
     def _find_html_path(self, element, element_type, default, warn_unrecognised=False):
         style = self._find_style(element, element_type)
         if style is not None:
             return style.html_path
-        
+
         if warn_unrecognised and getattr(element, "style_id", None) is not None:
             self._messages.append(results.warning(
                 "Unrecognised {0} style: {1} (Style ID: {2})".format(
                     element_type, element.style_name, element.style_id)
             ))
-        
+
         return default
-    
+
     def _find_style(self, element, element_type):
         for style in self._style_map:
             document_matcher = style.document_matcher
@@ -356,22 +355,22 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
     def _note_html_id(self, note):
         return self._referent_html_id(note.note_type, note.note_id)
-        
+
     def _note_ref_html_id(self, note):
         return self._reference_html_id(note.note_type, note.note_id)
-    
+
     def _referent_html_id(self, reference_type, reference_id):
         return self._html_id("{0}-{1}".format(reference_type, reference_id))
-    
+
     def _reference_html_id(self, reference_type, reference_id):
         return self._html_id("{0}-ref-{1}".format(reference_type, reference_id))
-    
+
     def _html_id(self, suffix):
         return "{0}{1}".format(self._id_prefix, suffix)
-        
+
 
 def _document_matcher_matches(matcher, element, element_type):
-    if matcher.element_type in ["underline", "strikethrough", "small_caps", "bold", "italic", "comment_reference"]:
+    if matcher.element_type in ["underline", "strikethrough", "all_caps", "small_caps", "bold", "italic", "comment_reference"]:
         return matcher.element_type == element_type
     elif matcher.element_type == "break":
         return (

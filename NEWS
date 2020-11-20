@@ -1,3 +1,41 @@
+# 1.4.13
+
+* Add style mapping for all caps.
+
+# 1.4.12
+
+* Handle underline elements where w:val is "none".
+
+# 1.4.11
+
+* Read font size for runs.
+* Support soft hyphens.
+
+# 1.4.10
+
+* Update supported Python versions to 2.7 and 3.4 to 3.8.
+
+# 1.4.9
+
+* Improve list support by following w:numStyleLink in w:abstractNum.
+
+# 1.4.8
+
+* Preserve empty table rows.
+
+# 1.4.7
+
+* Always write files as UTF-8 in the CLI.
+
+# 1.4.6
+
+* Fix: default style mappings caused footnotes, endnotes and comments
+  containing multiple paragraphs to be converted into a single paragraph.
+
+# 1.4.5
+
+* Read the children of v:rect elements.
+
 # 1.4.4
 
 * Parse paragraph indents.
@@ -82,7 +120,7 @@
 
 * Use alt text title as alt text for images when the alt text description is
   blank or missing.
-  
+
 # 1.1.1
 
 * Handle comments without author initials.
@@ -285,5 +323,5 @@
 
 * Allow paragraphs and runs to be matched by style name. For instance, to match
   a paragraph with the style name `Heading 1`:
-  
+
     p[style-name='Heading 1']
