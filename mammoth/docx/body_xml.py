@@ -237,7 +237,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         return _success(documents.text(unichr(0x2011), attributes=None))
 
     def soft_hyphen(element):
-        return _success(documents.text(u"\u00ad"), attributes=None)
+        return _success(documents.text(u"\u00ad", attributes=None))
     
     def table(element):
         properties = element.find_child_or_null("w:tblPr")
